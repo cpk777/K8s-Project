@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jitsu-server-deployment
+  labels:
+    app: jitsu-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jitsu-server
+  template:
+    metadata:
+      labels:
+        app: jitsu-server
+    spec:
+      containers:
+      - name: dind-daemon 
+        image: docker:dind
+        command: ["dockerd", "--host", "tcp://127.0.0.1:2375"]
+        securityContext: 
+            privileged: true
+        ports:
+          - containerPort: 2375 
+        volumeMounts:
+            - name: docker-graph-storage
+              mountPath: /var/lib/docker
+            - name: jitsu-claim2
+              mountPath: /tmp/airbyte/
+            - name: jitsu-claim3
+              mountPath: /var/run/docker.sock
+      - name: jitsu-server
+        image: jitsucom/server
+        ports:
+          - containerPort: 8001
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 1"]
+        volumeMounts:
+          - mountPath: /home/eventnative/data/logs
+            name: jitsu-claim0
+          - mountPath: /home/eventnative/data/logs/events
+            name: jitsu-claim1
+          - mountPath: /home/eventnative/data/airbyte
+            name: jitsu-claim2
+          - mountPath: /var/run/docker.sock
+            name: jitsu-claim3
+        env:
+          - name: REDIS_URL
+            value: redis://redis:6379
+          - name: USER_RECOGNITION_ENABLED
+            value: "true"
+          - name: USER_RECOGNITION_REDIS_URL
+            value: redis://redis-users:6380
+          - name: JITSU_CONFIGURATOR_URL
+            value: http://jitsu-config:7000/
+          - name: DOCKER_HOST 
+            value: tcp://localhost:2375
+          - name: SERVER_VOLUMES_WORKSPACE
+            value: /tmp/airbyte/
+      
+      volumes:
+        - name: jitsu-claim0
+          persistentVolumeClaim:
+            claimName: jitsu-claim0
+        - name: jitsu-claim1
+          persistentVolumeClaim:
+            claimName: jitsu-claim1
+        - name: jitsu-claim2
+          persistentVolumeClaim:
+            claimName: jitsu-claim2
+        - name: jitsu-claim3
+          persistentVolumeClaim:
+            claimName: jitsu-claim3
+        - name: docker-graph-storage 
+          emptyDir: {}
+        - name: jitsu-workspace
+          emptyDir: {}
+      initContainers:
+      - name: init-jitsu
+        image: jitsucom/server
+        command: ["/bin/bash"]
+        args: ['-c', 'sudo chmod -R 777 /home/eventnative']
+        volumeMounts:
+          - mountPath: /home/eventnative/data/logs
+            name: jitsu-claim0
+    

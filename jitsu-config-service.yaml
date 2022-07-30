@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: jitsu-config
+  name: jitsu-config
+spec:
+  ports:
+    - name: "7000"
+      port: 7000
+      targetPort: 7000
+      nodePort: 30007
+  selector:
+    app: jitsu-config
+  type: LoadBalancer
+status:
+  loadBalancer: {}

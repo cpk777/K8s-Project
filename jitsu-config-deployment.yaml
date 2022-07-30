@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jitsu-config-deployment
+  labels:
+    app: jitsu-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jitsu-config
+  template:
+    metadata:
+      labels:
+        app: jitsu-config
+    spec:
+      containers:
+      - name: jitsu-config
+        image: jitsucom/configurator
+        ports:
+          - containerPort: 7000
+        volumeMounts:
+          - mountPath: /home/configurator/data/logs/
+            name: jitsu-config
+        env:
+          - name: REDIS_URL
+            value: redis://redis:6379
+          - name: JITSU_SERVER_URL
+            value: http://jitsu-server:8001/
+        
+      volumes:
+        - name: jitsu-config
+          persistentVolumeClaim:
+            claimName: jitsu-config
+        - name: jitsu-claim3
+          persistentVolumeClaim:
+            claimName: jitsu-claim3
+
+      initContainers:
+        - name: init-jitsu
+          image: jitsucom/configurator
+          command: ["/bin/bash"]
+          args: ['-c', 'sudo chmod -R 777 /home/configurator']
+          volumeMounts:
+            - mountPath: /home/configurator/data/logs
+              name: jitsu-config

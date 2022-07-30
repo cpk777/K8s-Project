@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:6.2.6-bullseye
+        ports:
+          - containerPort: 6379
+        volumeMounts:
+          - mountPath: /data
+            name: redis
+      restartPolicy: Always
+      volumes:
+        - name: redis
+          persistentVolumeClaim:
+            claimName: redis
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-users-deployment
+  labels:
+    app: redis-users
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-users
+  template:
+    metadata:
+      labels:
+        app: redis-users
+    spec:
+      containers:
+      - name: redis-users
+        image: redis:6.2.6-bullseye
+        ports:
+          - containerPort: 6379
+        volumeMounts:
+          - mountPath: /data
+            name: redis-users0
+          - mountPath: /usr/local/etc/redis/redis.conf
+            name: redis-users1
+        command: ["redis-server","/usr/local/etc/redis/redis.conf"]
+      restartPolicy: Always
+      volumes:
+        - name: redis-users0
+          persistentVolumeClaim:
+            claimName: redis-users0
+        - name: redis-users1
+          persistentVolumeClaim:
+            claimName: redis-users1
+
